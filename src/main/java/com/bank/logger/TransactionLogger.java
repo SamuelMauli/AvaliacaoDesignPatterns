@@ -1,10 +1,14 @@
 package com.bank.logger;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Classe {@code TransactionLogger} implementa o padrão de projeto **Singleton**.
@@ -61,6 +65,23 @@ public class TransactionLogger {
     }
 
     /**
+     * Retorna todas as entradas de log do arquivo de transações.
+     * @return Uma lista de strings, onde cada string é uma linha do arquivo de log.
+     */
+    public List<String> getLogs() {
+        List<String> logs = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(LOG_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                logs.add(line);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao ler o arquivo de log: " + e.getMessage());
+        }
+        return logs;
+    }
+
+    /**
      * Fecha o {@code PrintWriter}, liberando os recursos do arquivo.
      * Deve ser chamado ao final da aplicação para garantir que todos os logs sejam gravados.
      */
@@ -70,3 +91,4 @@ public class TransactionLogger {
         }
     }
 }
+
