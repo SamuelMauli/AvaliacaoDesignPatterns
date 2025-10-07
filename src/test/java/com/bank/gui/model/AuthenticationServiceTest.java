@@ -15,14 +15,14 @@ public class AuthenticationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthenticationService();
+        authService = AuthenticationService.getInstance();
     }
 
     @Test
     void testAuthenticateValidUser() {
         // O serviço de autenticação tem usuários hardcoded para demonstração
-        assertTrue(authService.authenticate("user1", "pass1"));
-        assertTrue(authService.authenticate("admin", "admin"));
+        assertTrue(authService.authenticate("alice", "alice123"));
+        assertTrue(authService.authenticate("admin", "admin123"));
     }
 
     @Test
