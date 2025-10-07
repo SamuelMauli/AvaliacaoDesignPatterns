@@ -143,6 +143,15 @@ public class BankingFacade {
     }
 
     /**
+     * Retorna o histórico de transações completo do sistema.
+     * Utiliza o {@code TransactionLogger} (Singleton) para obter os logs.
+     * @return Uma lista de strings, onde cada string representa uma transação logada.
+     */
+    public java.util.List<String> getTransactionHistory() {
+        return com.bank.logger.TransactionLogger.getInstance().getLogs();
+    }
+
+    /**
      * Realiza uma transferência entre duas contas.
      * Esta operação combina um saque da conta de origem e um depósito na conta de destino.
      * @param fromAccountNumber Número da conta de origem.
@@ -205,3 +214,4 @@ public class BankingFacade {
         }
     }
 }
+

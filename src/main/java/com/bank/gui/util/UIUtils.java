@@ -57,8 +57,12 @@ public class UIUtils {
      * @param title O título do alerta.
      * @param message A mensagem do alerta.
      */
+    public static void showInfoAlert(String title, String headerText, String contentText) {
+        showAlert(title, headerText, contentText, Alert.AlertType.INFORMATION);
+    }
+
     public static void showInfoAlert(String title, String message) {
-        showAlert(title, message, Alert.AlertType.INFORMATION);
+        showAlert(title, null, message, Alert.AlertType.INFORMATION);
     }
 
     /**
@@ -101,11 +105,11 @@ public class UIUtils {
      * @param message A mensagem do alerta.
      * @param type O tipo do alerta.
      */
-    private static void showAlert(String title, String message, Alert.AlertType type) {
+    private static void showAlert(String title, String headerText, String contentText, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
+        alert.setHeaderText(headerText);
+        alert.setContentText(contentText);
         alert.showAndWait();
     }
 
