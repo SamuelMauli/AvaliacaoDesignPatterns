@@ -12,9 +12,8 @@ public class CheckingAccount extends Account implements Withdrawable {
     public void withdraw(double amount) {
         if (amount > 0) {
             if (this.balance + this.overdraftLimit >= amount) {
-                this.balance -= amount;
+                adjustBalanceAndNotify(-amount, "withdraw");
                 System.out.println("Withdrawal of " + amount + " from account " + accountNumber + ". New balance: " + balance);
-                notifyObservers("withdraw", amount);
             } else {
                 System.out.println("Insufficient funds and overdraft limit exceeded.");
             }

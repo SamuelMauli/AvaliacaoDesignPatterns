@@ -38,18 +38,23 @@ public abstract class Account implements Depositable {
         observers.remove(observer);
     }
 
-    protected void notifyObservers(String eventType, double amount) {
+    public void notifyObservers(String eventType, double amount) {
         for (AccountObserver observer : observers) {
             observer.update(this, eventType, amount);
         }
     }
 
+    // Method for internal balance adjustment and notification, accessible by subclasses and decorators
+    public void adjustBalanceAndNotify(double amount, String eventType) {
+        this.balance += amount;
+        notifyObservers(eventType, amount);
+    }
+
     @Override
     public void deposit(double amount) {
         if (amount > 0) {
-            this.balance += amount;
+            adjustBalanceAndNotify(amount, "deposit");
             System.out.println("Deposit of " + amount + " to account " + accountNumber + ". New balance: " + balance);
-            notifyObservers("deposit", amount);
         } else {
             System.out.println("Deposit amount must be positive.");
         }

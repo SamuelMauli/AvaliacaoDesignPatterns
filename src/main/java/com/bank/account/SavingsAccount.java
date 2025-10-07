@@ -21,9 +21,8 @@ public class SavingsAccount extends Account implements Withdrawable, InterestBea
     public void withdraw(double amount) {
         if (amount > 0) {
             if (this.balance >= amount) {
-                this.balance -= amount;
+                adjustBalanceAndNotify(-amount, "withdraw");
                 System.out.println("Withdrawal of " + amount + " from account " + accountNumber + ". New balance: " + balance);
-                notifyObservers("withdraw", amount);
             } else {
                 System.out.println("Insufficient funds.");
             }
@@ -35,9 +34,8 @@ public class SavingsAccount extends Account implements Withdrawable, InterestBea
     @Override
     public void calculateInterest() {
         double interest = interestStrategy.calculateInterest(this.balance, this.interestRate);
-        this.balance += interest;
+        adjustBalanceAndNotify(interest, "interest_calculation");
         System.out.println("Interest of " + interest + " added to account " + accountNumber + ". New balance: " + balance);
-        notifyObservers("interest_calculation", interest);
     }
 
     @Override
