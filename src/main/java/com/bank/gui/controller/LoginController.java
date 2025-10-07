@@ -1,6 +1,8 @@
 package com.bank.gui.controller;
 
 import com.bank.gui.model.AuthenticationService;
+import com.bank.gui.util.ValidationUtils;
+import com.bank.gui.util.UIUtils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -78,11 +80,42 @@ public class LoginController {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
 
-        // Validação básica dos campos
-        if (username.isEmpty() || password.isEmpty()) {
-            showError("Por favor, preencha todos os campos.");
+        // Limpa estilos anteriores
+        UIUtils.clearValidationStyles(usernameField, passwordField);
+        statusLabel.setText("");
+
+        // Validação aprimorada dos campos
+        boolean isValid = true;
+        StringBuilder errorMessage = new StringBuilder();
+
+        if (!ValidationUtils.isNotEmpty(username)) {
+            UIUtils.applyErrorStyle(usernameField);
+            errorMessage.append("Nome de usuário é obrigatório. ");
+            isValid = false;
+        } else if (!ValidationUtils.isValidUsername(username)) {
+            UIUtils.applyErrorStyle(usernameField);
+            errorMessage.append("Nome de usuário deve ter 3-20 caracteres (apenas letras, números e _). ");
+            isValid = false;
+        }
+
+        if (!ValidationUtils.isNotEmpty(password)) {
+            UIUtils.applyErrorStyle(passwordField);
+            errorMessage.append("Senha é obrigatória. ");
+            isValid = false;
+        } else if (!ValidationUtils.isValidPassword(password)) {
+            UIUtils.applyErrorStyle(passwordField);
+            errorMessage.append("Senha deve ter pelo menos 6 caracteres. ");
+            isValid = false;
+        }
+
+        if (!isValid) {
+            showError(errorMessage.toString().trim());
             return;
         }
+
+        // Aplica estilo de sucesso aos campos válidos
+        UIUtils.applySuccessStyle(usernameField);
+        UIUtils.applySuccessStyle(passwordField);
 
         // Tenta autenticar o usuário
         if (authService.authenticate(username, password)) {
@@ -99,6 +132,8 @@ public class LoginController {
             }).start();
             
         } else {
+            UIUtils.applyErrorStyle(usernameField);
+            UIUtils.applyErrorStyle(passwordField);
             showError("Credenciais inválidas. Tente novamente.");
             passwordField.clear();
             passwordField.requestFocus();
@@ -133,7 +168,8 @@ public class LoginController {
      */
     private void showError(String message) {
         statusLabel.setText(message);
-        statusLabel.setStyle("-fx-text-fill: #d32f2f; -fx-font-weight: bold;");
+        UIUtils.applyErrorStyle(statusLabel);
+        UIUtils.fadeInAnimation(statusLabel);
     }
 
     /**
@@ -142,7 +178,8 @@ public class LoginController {
      */
     private void showSuccess(String message) {
         statusLabel.setText(message);
-        statusLabel.setStyle("-fx-text-fill: #388e3c; -fx-font-weight: bold;");
+        UIUtils.applySuccessStyle(statusLabel);
+        UIUtils.fadeInAnimation(statusLabel);
     }
 
     /**

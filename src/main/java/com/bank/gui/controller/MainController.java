@@ -7,6 +7,8 @@ import com.bank.account.SavingsAccount;
 import com.bank.facade.BankingFacade;
 import com.bank.gui.model.AuthenticationService;
 import com.bank.gui.model.User;
+import com.bank.gui.util.ValidationUtils;
+import com.bank.gui.util.UIUtils;
 import com.bank.observer.AuditService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -265,21 +267,67 @@ public class MainController {
      */
     @FXML
     private void handleCreateAccount(ActionEvent event) {
+        // Limpa estilos anteriores
+        UIUtils.clearValidationStyles(newAccountNameField, initialBalanceField, parameterField);
+
+        // Validação dos campos
+        boolean isValid = true;
+        StringBuilder errorMessage = new StringBuilder();
+
+        String customerName = newAccountNameField.getText().trim();
+        AccountType accountType = accountTypeCombo.getValue();
+
+        // Valida nome do cliente
+        if (!ValidationUtils.isValidName(customerName)) {
+            UIUtils.applyErrorStyle(newAccountNameField);
+            errorMessage.append("Nome deve ter 2-50 caracteres (apenas letras e espaços). ");
+            isValid = false;
+        }
+
+        // Valida tipo de conta
+        if (accountType == null) {
+            errorMessage.append("Selecione um tipo de conta. ");
+            isValid = false;
+        }
+
+        // Valida saldo inicial
+        if (!ValidationUtils.isValidNonNegativeNumber(initialBalanceField.getText())) {
+            UIUtils.applyErrorStyle(initialBalanceField);
+            errorMessage.append("Saldo inicial deve ser um número não-negativo. ");
+            isValid = false;
+        }
+
+        // Valida parâmetro específico do tipo de conta
+        if (!ValidationUtils.isValidNumber(parameterField.getText())) {
+            UIUtils.applyErrorStyle(parameterField);
+            errorMessage.append("Parâmetro deve ser um número válido. ");
+            isValid = false;
+        } else {
+            double parameter = Double.parseDouble(parameterField.getText());
+            if (accountType == AccountType.CHECKING && !ValidationUtils.isValidOverdraftLimit(parameter)) {
+                UIUtils.applyErrorStyle(parameterField);
+                errorMessage.append("Limite de cheque especial deve ser não-negativo. ");
+                isValid = false;
+            } else if (accountType == AccountType.SAVINGS && !ValidationUtils.isValidInterestRate(parameter)) {
+                UIUtils.applyErrorStyle(parameterField);
+                errorMessage.append("Taxa de juros deve estar entre 0 e 1 (0% a 100%). ");
+                isValid = false;
+            }
+        }
+
+        if (!isValid) {
+            UIUtils.showErrorAlert("Erro de Validação", errorMessage.toString().trim());
+            return;
+        }
+
         try {
-            String customerName = newAccountNameField.getText().trim();
-            AccountType accountType = accountTypeCombo.getValue();
             double initialBalance = Double.parseDouble(initialBalanceField.getText());
             double parameter = Double.parseDouble(parameterField.getText());
 
-            if (customerName.isEmpty()) {
-                showAlert("Erro", "Por favor, preencha o nome do titular da conta.", Alert.AlertType.ERROR);
-                return;
-            }
-
-            if (initialBalance < 0) {
-                showAlert("Erro", "O saldo inicial não pode ser negativo.", Alert.AlertType.ERROR);
-                return;
-            }
+            // Aplica estilos de sucesso
+            UIUtils.applySuccessStyle(newAccountNameField);
+            UIUtils.applySuccessStyle(initialBalanceField);
+            UIUtils.applySuccessStyle(parameterField);
 
             String accountNumber = bankingFacade.createAccount(accountType, customerName, initialBalance, parameter);
             Account newAccount = bankingFacade.getAccount(accountNumber);
@@ -287,19 +335,23 @@ public class MainController {
                 newAccount.addObserver(auditService);
             }
 
-            showAlert("Sucesso", "Conta criada com sucesso!\nNúmero da conta: " + accountNumber, Alert.AlertType.INFORMATION);
+            UIUtils.showSuccessAlert("Sucesso", 
+                "Conta criada com sucesso!\n" +
+                "Número da conta: " + UIUtils.formatAccountNumber(accountNumber) + "\n" +
+                "Saldo inicial: " + UIUtils.formatCurrency(initialBalance));
             
-            // Limpa os campos
+            // Limpa os campos e estilos
             newAccountNameField.clear();
             initialBalanceField.clear();
             parameterField.clear();
+            UIUtils.clearValidationStyles(newAccountNameField, initialBalanceField, parameterField);
             
             // Atualiza a lista de contas
             refreshAccountsList();
             refreshTransactionHistory();
 
         } catch (NumberFormatException e) {
-            showAlert("Erro", "Por favor, insira valores numéricos válidos.", Alert.AlertType.ERROR);
+            UIUtils.showErrorAlert("Erro", "Erro interno ao processar valores numéricos.");
         }
     }
 
@@ -323,34 +375,74 @@ public class MainController {
      * Realiza uma transação (depósito ou saque).
      */
     private void performTransaction(String operation) {
+        // Limpa estilos anteriores
+        UIUtils.clearValidationStyles(amountField);
+
+        String accountNumber = operationAccountCombo.getValue();
+        String amountText = amountField.getText().trim();
+
+        // Validações
+        if (accountNumber == null || accountNumber.isEmpty()) {
+            UIUtils.showErrorAlert("Erro", "Por favor, selecione uma conta.");
+            return;
+        }
+
+        if (!ValidationUtils.isValidPositiveNumber(amountText)) {
+            UIUtils.applyErrorStyle(amountField);
+            UIUtils.showErrorAlert("Erro", "O valor deve ser um número positivo.");
+            return;
+        }
+
         try {
-            String accountNumber = operationAccountCombo.getValue();
-            double amount = Double.parseDouble(amountField.getText());
-
-            if (accountNumber == null || accountNumber.isEmpty()) {
-                showAlert("Erro", "Por favor, selecione uma conta.", Alert.AlertType.ERROR);
-                return;
+            double amount = Double.parseDouble(amountText);
+            
+            // Validações específicas para saque
+            if ("withdraw".equals(operation)) {
+                Account account = bankingFacade.getAccount(accountNumber);
+                if (account != null) {
+                    double availableBalance = account.getBalance();
+                    if (account instanceof com.bank.account.CheckingAccount) {
+                        com.bank.account.CheckingAccount checking = (com.bank.account.CheckingAccount) account;
+                        availableBalance += checking.getOverdraftLimit();
+                    }
+                    
+                    if (amount > availableBalance) {
+                        UIUtils.applyErrorStyle(amountField);
+                        UIUtils.showErrorAlert("Saldo Insuficiente", 
+                            "Saldo disponível: " + UIUtils.formatCurrency(availableBalance));
+                        return;
+                    }
+                }
             }
-
-            if (amount <= 0) {
-                showAlert("Erro", "O valor deve ser positivo.", Alert.AlertType.ERROR);
-                return;
+            
+            // Confirma a operação
+            String operationName = "deposit".equals(operation) ? "depósito" : "saque";
+            String preposition = "deposit".equals(operation) ? "na" : "da";
+            
+            if (UIUtils.showConfirmationAlert("Confirmar " + UIUtils.capitalizeWords(operationName), 
+                "Confirma o " + operationName + " de " + UIUtils.formatCurrency(amount) + 
+                " " + preposition + " conta " + UIUtils.formatAccountNumber(accountNumber) + "?")) {
+                
+                UIUtils.applySuccessStyle(amountField);
+                
+                if ("deposit".equals(operation)) {
+                    bankingFacade.deposit(accountNumber, amount);
+                } else if ("withdraw".equals(operation)) {
+                    bankingFacade.withdraw(accountNumber, amount);
+                }
+                
+                UIUtils.showSuccessAlert("Sucesso", 
+                    UIUtils.capitalizeWords(operationName) + " de " + UIUtils.formatCurrency(amount) + " realizado com sucesso!");
+                
+                amountField.clear();
+                UIUtils.clearValidationStyles(amountField);
+                refreshAccountsList();
+                refreshTransactionHistory();
             }
-
-            if ("deposit".equals(operation)) {
-                bankingFacade.deposit(accountNumber, amount);
-                showAlert("Sucesso", "Depósito realizado com sucesso!", Alert.AlertType.INFORMATION);
-            } else if ("withdraw".equals(operation)) {
-                bankingFacade.withdraw(accountNumber, amount);
-                showAlert("Sucesso", "Saque realizado com sucesso!", Alert.AlertType.INFORMATION);
-            }
-
-            amountField.clear();
-            refreshAccountsList();
-            refreshTransactionHistory();
 
         } catch (NumberFormatException e) {
-            showAlert("Erro", "Por favor, insira um valor numérico válido.", Alert.AlertType.ERROR);
+            UIUtils.applyErrorStyle(amountField);
+            UIUtils.showErrorAlert("Erro", "Erro ao processar o valor inserido.");
         }
     }
 
@@ -381,43 +473,81 @@ public class MainController {
      */
     @FXML
     private void handleTransfer(ActionEvent event) {
+        // Limpa estilos anteriores
+        UIUtils.clearValidationStyles(transferAmountField);
+
+        String fromAccount = fromAccountCombo.getValue();
+        String toAccount = toAccountCombo.getValue();
+        String amountText = transferAmountField.getText().trim();
+
+        // Validações
+        if (fromAccount == null || fromAccount.isEmpty()) {
+            UIUtils.showErrorAlert("Erro", "Por favor, selecione a conta de origem.");
+            return;
+        }
+
+        if (toAccount == null || toAccount.isEmpty()) {
+            UIUtils.showErrorAlert("Erro", "Por favor, selecione a conta de destino.");
+            return;
+        }
+
+        if (fromAccount.equals(toAccount)) {
+            UIUtils.showErrorAlert("Erro", "A conta de origem e destino devem ser diferentes.");
+            return;
+        }
+
+        if (!ValidationUtils.isValidPositiveNumber(amountText)) {
+            UIUtils.applyErrorStyle(transferAmountField);
+            UIUtils.showErrorAlert("Erro", "O valor da transferência deve ser um número positivo.");
+            return;
+        }
+
         try {
-            String fromAccount = fromAccountCombo.getValue();
-            String toAccount = toAccountCombo.getValue();
-            double amount = Double.parseDouble(transferAmountField.getText());
-
-            if (fromAccount == null || fromAccount.isEmpty()) {
-                showAlert("Erro", "Por favor, selecione a conta de origem.", Alert.AlertType.ERROR);
-                return;
+            double amount = Double.parseDouble(amountText);
+            
+            // Verifica saldo disponível na conta de origem
+            Account sourceAccount = bankingFacade.getAccount(fromAccount);
+            if (sourceAccount != null) {
+                double availableBalance = sourceAccount.getBalance();
+                if (sourceAccount instanceof com.bank.account.CheckingAccount) {
+                    com.bank.account.CheckingAccount checking = (com.bank.account.CheckingAccount) sourceAccount;
+                    availableBalance += checking.getOverdraftLimit();
+                }
+                
+                if (amount > availableBalance) {
+                    UIUtils.applyErrorStyle(transferAmountField);
+                    UIUtils.showErrorAlert("Saldo Insuficiente", 
+                        "Saldo disponível na conta de origem: " + UIUtils.formatCurrency(availableBalance));
+                    return;
+                }
             }
-
-            if (toAccount == null || toAccount.isEmpty()) {
-                showAlert("Erro", "Por favor, selecione a conta de destino.", Alert.AlertType.ERROR);
-                return;
-            }
-
-            if (fromAccount.equals(toAccount)) {
-                showAlert("Erro", "A conta de origem e destino devem ser diferentes.", Alert.AlertType.ERROR);
-                return;
-            }
-
-            if (amount <= 0) {
-                showAlert("Erro", "O valor da transferência deve ser positivo.", Alert.AlertType.ERROR);
-                return;
-            }
-
-            boolean success = bankingFacade.transfer(fromAccount, toAccount, amount);
-            if (success) {
-                showAlert("Sucesso", "Transferência realizada com sucesso!", Alert.AlertType.INFORMATION);
-                transferAmountField.clear();
-                refreshAccountsList();
-                refreshTransactionHistory();
-            } else {
-                showAlert("Erro", "Falha na transferência. Verifique o saldo e tente novamente.", Alert.AlertType.ERROR);
+            
+            // Confirma a operação
+            if (UIUtils.showConfirmationAlert("Confirmar Transferência", 
+                "Confirma a transferência de " + UIUtils.formatCurrency(amount) + 
+                "\nDe: " + UIUtils.formatAccountNumber(fromAccount) + 
+                "\nPara: " + UIUtils.formatAccountNumber(toAccount) + "?")) {
+                
+                UIUtils.applySuccessStyle(transferAmountField);
+                
+                boolean success = bankingFacade.transfer(fromAccount, toAccount, amount);
+                if (success) {
+                    UIUtils.showSuccessAlert("Sucesso", 
+                        "Transferência de " + UIUtils.formatCurrency(amount) + " realizada com sucesso!");
+                    
+                    transferAmountField.clear();
+                    UIUtils.clearValidationStyles(transferAmountField);
+                    refreshAccountsList();
+                    refreshTransactionHistory();
+                } else {
+                    UIUtils.applyErrorStyle(transferAmountField);
+                    UIUtils.showErrorAlert("Erro", "Falha na transferência. Verifique o saldo e tente novamente.");
+                }
             }
 
         } catch (NumberFormatException e) {
-            showAlert("Erro", "Por favor, insira um valor numérico válido.", Alert.AlertType.ERROR);
+            UIUtils.applyErrorStyle(transferAmountField);
+            UIUtils.showErrorAlert("Erro", "Erro ao processar o valor inserido.");
         }
     }
 
