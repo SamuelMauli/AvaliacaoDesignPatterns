@@ -1,11 +1,20 @@
 package com.bank.account;
 
+import com.bank.strategy.InterestCalculationStrategy;
+import com.bank.strategy.SimpleInterestStrategy;
+
 public class SavingsAccount extends Account implements Withdrawable, InterestBearing {
+    private InterestCalculationStrategy interestStrategy;
     private double interestRate;
 
     public SavingsAccount(String customerName, double initialBalance, double interestRate) {
         super(customerName, initialBalance);
         this.interestRate = interestRate;
+        this.interestStrategy = new SimpleInterestStrategy(); // Default strategy
+    }
+
+    public void setInterestStrategy(InterestCalculationStrategy interestStrategy) {
+        this.interestStrategy = interestStrategy;
     }
 
     @Override
@@ -25,7 +34,7 @@ public class SavingsAccount extends Account implements Withdrawable, InterestBea
 
     @Override
     public void calculateInterest() {
-        double interest = this.balance * interestRate;
+        double interest = interestStrategy.calculateInterest(this.balance, this.interestRate);
         this.balance += interest;
         System.out.println("Interest of " + interest + " added to account " + accountNumber + ". New balance: " + balance);
         notifyObservers("interest_calculation", interest);
