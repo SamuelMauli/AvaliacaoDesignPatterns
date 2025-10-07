@@ -29,43 +29,82 @@ public class User {
         this.isLoggedIn = false;
     }
 
-    // Getters e Setters
+    /**
+     * Retorna o nome de usuário.
+     * @return O nome de usuário.
+     */
     public String getUsername() {
         return username;
     }
 
+    /**
+     * Define o nome de usuário.
+     * @param username O novo nome de usuário.
+     */
     public void setUsername(String username) {
         this.username = username;
     }
 
+    /**
+     * Retorna a senha do usuário.
+     * @return A senha do usuário.
+     */
     public String getPassword() {
         return password;
     }
 
+    /**
+     * Define a senha do usuário.
+     * @param password A nova senha do usuário.
+     */
     public void setPassword(String password) {
         this.password = password;
     }
 
+    /**
+     * Retorna o nome completo do usuário.
+     * @return O nome completo do usuário.
+     */
     public String getFullName() {
         return fullName;
     }
 
+    /**
+     * Define o nome completo do usuário.
+     * @param fullName O novo nome completo do usuário.
+     */
     public void setFullName(String fullName) {
         this.fullName = fullName;
     }
 
+    /**
+     * Retorna o email do usuário.
+     * @return O email do usuário.
+     */
     public String getEmail() {
         return email;
     }
 
+    /**
+     * Define o email do usuário.
+     * @param email O novo email do usuário.
+     */
     public void setEmail(String email) {
         this.email = email;
     }
 
+    /**
+     * Verifica se o usuário está logado.
+     * @return true se o usuário está logado, false caso contrário.
+     */
     public boolean isLoggedIn() {
         return isLoggedIn;
     }
 
+    /**
+     * Define o status de login do usuário.
+     * @param loggedIn O status de login.
+     */
     public void setLoggedIn(boolean loggedIn) {
         isLoggedIn = loggedIn;
     }
@@ -79,6 +118,10 @@ public class User {
         return this.password.equals(inputPassword);
     }
 
+    /**
+     * Retorna uma representação em String do objeto User.
+     * @return Uma String contendo os detalhes do usuário.
+     */
     @Override
     public String toString() {
         return "User{" +
@@ -89,3 +132,4 @@ public class User {
                 '}';
     }
 }
+

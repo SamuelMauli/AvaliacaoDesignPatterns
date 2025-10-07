@@ -19,8 +19,9 @@ Este projeto implementa um sistema bancário simplificado em Java, com foco na a
     *   [Decorator](#decorator)
     *   [Observer](#observer)
     *   [Strategy](#strategy)
-5.  [Como Executar o Projeto](#como-executar-o-projeto)
-6.  [Testes](#testes)
+5.  [Interface Gráfica do Usuário (GUI)](#interface-gráfica-do-usuário-gui)
+6.  [Como Executar o Projeto](#como-executar-o-projeto)
+7.  [Testes](#testes)
 
 ## 1. Introdução
 
@@ -28,31 +29,40 @@ O sistema bancário é um domínio complexo que se beneficia enormemente da apli
 
 ## 2. Estrutura do Projeto
 
-O projeto segue uma estrutura Maven padrão, com pacotes organizados por funcionalidade e padrão de projeto:
+O projeto segue uma estrutura Maven padrão, com pacotes organizados por funcionalidade e padrão de projeto. Com a adição da GUI, a estrutura foi expandida para incluir componentes JavaFX:
 
 ```
 AvaliacaoDesignPatterns
 ├── pom.xml
 └── src
-    └── main
-        └── java
-            └── com
-                └── bank
-                    ├── account             // Classes base de contas e interfaces
-                    ├── app                 // Classe principal para execução
-                    ├── command             // Implementações do padrão Command
-                    ├── decorator           // Implementações do padrão Decorator
-                    ├── facade              // Implementação do padrão Facade
-                    ├── factory             // Implementação do padrão Factory Method
-                    ├── logger              // Implementação do padrão Singleton
-                    ├── observer            // Implementações do padrão Observer
-                    └── strategy            // Implementações do padrão Strategy
+    ├── main
+    │   ├── java
+    │   │   └── com
+    │   │       └── bank
+    │   │           ├── account             // Classes base de contas e interfaces
+    │   │           ├── app                 // Classe principal para execução via console
+    │   │           ├── command             // Implementações do padrão Command
+    │   │           ├── decorator           // Implementações do padrão Decorator
+    │   │           ├── facade              // Implementação do padrão Facade
+    │   │           ├── factory             // Implementação do padrão Factory Method
+    │   │           ├── gui                 // Componentes da Interface Gráfica (JavaFX)
+    │   │           │   ├── controller      // Controladores FXML
+    │   │           │   ├── model           // Modelos de dados para a GUI (ex: User, AuthenticationService)
+    │   │           │   ├── util            // Classes utilitárias para GUI (validação, UI)
+    │   │           │   └── BankingApplication.java // Classe principal da aplicação GUI
+    │   │           ├── logger              // Implementação do padrão Singleton
+    │   │           ├── observer            // Implementações do padrão Observer
+    │   │           └── strategy            // Implementações do padrão Strategy
+    │   └── resources
+    │       └── fxml                  // Arquivos FXML para as telas da GUI
     └── test
         └── java
             └── com
                 └── bank
                     ├── account             // Testes para classes de conta
-                    └── factory             // Testes para AccountFactory
+                    ├── facade              // Testes para BankingFacade
+                    ├── factory             // Testes para AccountFactory
+                    └── gui                 // Testes para componentes da GUI (ex: AuthenticationServiceTest)
 ```
 
 ## 3. Princípios SOLID Aplicados
@@ -68,6 +78,8 @@ Os princípios SOLID são um conjunto de cinco princípios de design de software
 *   **`TransactionLogger`**: Sua única responsabilidade é registrar eventos em um arquivo de log.
 *   **`AuditService`**: Focado exclusivamente na tarefa de auditoria de eventos de conta.
 *   **Estratégias de Juros (`SimpleInterestStrategy`, `HighYieldInterestStrategy`)**: Cada uma é responsável apenas por um método específico de cálculo de juros.
+*   **`AuthenticationService`**: Responsável exclusivamente pela autenticação e gerenciamento de usuários.
+*   **`ValidationUtils` e `UIUtils`**: Cada um com responsabilidades bem definidas de validação e manipulação de UI, respectivamente.
 
 ### Princípio Aberto/Fechado (OCP)
 
@@ -105,6 +117,7 @@ Os princípios SOLID são um conjunto de cinco princípios de design de software
 *   **`AccountFactory`**: O cliente depende da fábrica e da abstração `Account`, não das classes concretas de conta.
 *   **`BankingFacade`**: O cliente interage com a Facade, que por sua vez coordena com as abstrações dos subsistemas (Factory, Command, etc.).
 *   **`DepositCommand` e `WithdrawCommand`**: Dependem da abstração `Account` ou `Withdrawable`.
+*   **Controladores da GUI**: Dependem da `BankingFacade` e do `AuthenticationService` (abstrações ou serviços de alto nível) para realizar operações, sem se preocupar com os detalhes de implementação dos subsistemas bancários.
 
 ## 4. Padrões de Projeto Implementados
 
@@ -127,10 +140,11 @@ Os padrões de projeto são soluções reutilizáveis para problemas comuns no d
 
 **Aplicação no Projeto:**
 *   **`TransactionLogger`**: A classe `TransactionLogger` é implementada como um Singleton. Ela possui um construtor privado e um método estático `getInstance()` que retorna a única instância da classe. Isso garante que todos os logs sejam escritos no mesmo arquivo e evita problemas de concorrência.
+*   **`AuthenticationService`**: Também implementado como Singleton para garantir um único ponto de gerenciamento de sessão e autenticação de usuários em toda a aplicação GUI.
 
 **Benefícios:**
-*   **Controle de Instância**: Garante que apenas uma instância de um recurso (neste caso, o logger de transações) seja utilizada, economizando recursos e evitando inconsistências.
-*   **Ponto de Acesso Global**: Facilita o acesso ao logger de qualquer parte da aplicação.
+*   **Controle de Instância**: Garante que apenas uma instância de um recurso (neste caso, o logger de transações e o serviço de autenticação) seja utilizada, economizando recursos e evitando inconsistências.
+*   **Ponto de Acesso Global**: Facilita o acesso ao logger e ao serviço de autenticação de qualquer parte da aplicação.
 
 ### Command
 
@@ -142,7 +156,7 @@ Os padrões de projeto são soluções reutilizáveis para problemas comuns no d
 *   **`BankingFacade`**: Utiliza esses comandos para realizar as operações bancárias, invocando o método `execute()` do comando apropriado.
 
 **Benefícios:**
-*   **Desacoplamento**: O invocador (a `BankingFacade`) é desacoplado da implementação da operação. Ele apenas sabe como executar um `Command`.
+*   **Desacoplamento**: O invocador (a `BankingFacade` ou um controlador da GUI) é desacoplado da implementação da operação. Ele apenas sabe como executar um `Command`.
 *   **Extensibilidade**: Novas operações podem ser adicionadas criando novas classes de comando sem modificar o invocador.
 *   **Flexibilidade**: Permite a implementação de funcionalidades como histórico de transações, operações desfazíveis ou agendamento de transações.
 
@@ -151,10 +165,11 @@ Os padrões de projeto são soluções reutilizáveis para problemas comuns no d
 **Propósito:** Fornece uma interface unificada para um conjunto de interfaces em um subsistema. Facade define uma interface de nível superior que torna o subsistema mais fácil de usar.
 
 **Aplicação no Projeto:**
-*   **`BankingFacade`**: Atua como uma interface simplificada para o sistema bancário. Ela expõe métodos como `createAccount`, `deposit`, `withdraw` e `getBalance`, que internamente coordenam com `AccountFactory`, `DepositCommand`, `WithdrawCommand` e as classes `Account`.
+*   **`BankingFacade`**: Atua como uma interface simplificada para o sistema bancário. Ela expõe métodos como `createAccount`, `deposit`, `withdraw`, `transfer` e `getBalance`, que internamente coordenam com `AccountFactory`, `DepositCommand`, `WithdrawCommand` e as classes `Account`.
+*   **Controladores da GUI**: Interagem exclusivamente com a `BankingFacade` para realizar todas as operações bancárias, sem precisar conhecer os detalhes complexos dos subsistemas internos.
 
 **Benefícios:**
-*   **Simplificação**: Reduz a complexidade do cliente ao interagir com um subsistema complexo.
+*   **Simplificação**: Reduz a complexidade do cliente (incluindo a GUI) ao interagir com um subsistema complexo.
 *   **Desacoplamento**: O cliente é desacoplado dos detalhes de implementação dos subsistemas internos.
 *   **Manutenibilidade**: Mudanças nos subsistemas internos têm menos impacto no código cliente, desde que a interface da Facade permaneça estável.
 
@@ -199,7 +214,28 @@ Os padrões de projeto são soluções reutilizáveis para problemas comuns no d
 *   **OCP**: Novas estratégias de juros podem ser adicionadas sem modificar a classe `SavingsAccount`.
 *   **SRP**: Cada estratégia é responsável apenas por um algoritmo de cálculo de juros.
 
-## 5. Como Executar o Projeto
+## 5. Interface Gráfica do Usuário (GUI)
+
+Para tornar o sistema mais interativo e completo, foi desenvolvida uma Interface Gráfica do Usuário (GUI) utilizando **JavaFX**. A GUI integra todas as funcionalidades do sistema bancário, proporcionando uma experiência de usuário mais rica.
+
+**Componentes da GUI:**
+*   **`BankingApplication.java`**: A classe principal da aplicação JavaFX, responsável por carregar as telas e iniciar a aplicação.
+*   **`LoginController.java` e `login.fxml`**: Implementam a tela de login, onde os usuários podem autenticar-se no sistema. Utiliza o `AuthenticationService` (Singleton) para gerenciar as credenciais.
+*   **`MainController.java` e `main.fxml`**: Representam a janela principal da aplicação após o login. Esta tela permite aos usuários:
+    *   Visualizar suas contas e saldos.
+    *   Criar novas contas (corrente ou poupança).
+    *   Realizar depósitos e saques.
+    *   Efetuar transferências entre contas.
+    *   Calcular juros para contas poupança.
+    *   Visualizar o histórico de transações.
+*   **`ValidationUtils.java` e `UIUtils.java`**: Classes utilitárias para fornecer validações de entrada e feedback visual (mensagens de erro/sucesso, formatação de valores) consistentes em toda a GUI, melhorando a usabilidade e a robustez.
+
+**Integração com Padrões de Projeto:**
+*   A GUI interage primariamente com a `BankingFacade`, demonstrando o benefício do padrão Facade ao simplificar a complexidade do subsistema bancário para a camada de apresentação.
+*   O `AuthenticationService` é um Singleton, garantindo que o estado de autenticação seja consistente em toda a aplicação.
+*   As validações e o feedback visual seguem o princípio SRP, com classes dedicadas para essas responsabilidades.
+
+## 6. Como Executar o Projeto
 
 Para compilar e executar este projeto, você precisará ter o **Java Development Kit (JDK) 11 ou superior** e o **Apache Maven** instalados.
 
@@ -214,13 +250,23 @@ Para compilar e executar este projeto, você precisará ter o **Java Development
     mvn clean install
     ```
 
-3.  **Execute a aplicação principal:**
+3.  **Execute a aplicação via Console (demonstração dos padrões):**
     ```bash
     mvn exec:java -Dexec.mainClass="com.bank.app.Main"
     ```
     A classe `com.bank.app.Main` demonstra a criação de contas, depósitos, saques e a aplicação de padrões de projeto.
 
-## 6. Testes
+4.  **Execute a aplicação GUI (JavaFX):**
+    ```bash
+    mvn javafx:run
+    ```
+    Esta é a aplicação com interface gráfica completa. Você pode usar as seguintes credenciais para login:
+    *   **Usuário:** `admin` / **Senha:** `admin123`
+    *   **Usuário:** `alice` / **Senha:** `alice123`
+    *   **Usuário:** `bob` / **Senha:** `bob123`
+    *   **Usuário:** `charlie` / **Senha:** `charlie123`
+
+## 7. Testes
 
 Para executar os testes JUnit do projeto:
 
@@ -228,4 +274,4 @@ Para executar os testes JUnit do projeto:
 mvn test
 ```
 
-Os testes estão localizados no diretório `src/test/java` e cobrem as funcionalidades principais das classes de conta e da fábrica de contas, garantindo a correção das implementações dos padrões de projeto.
+Os testes estão localizados no diretório `src/test/java` e cobrem as funcionalidades principais das classes de conta, da fábrica de contas, da `BankingFacade` e do `AuthenticationService`, garantindo a correção das implementações dos padrões de projeto e da lógica de negócios.

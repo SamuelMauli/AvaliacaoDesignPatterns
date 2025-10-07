@@ -2,14 +2,13 @@ package com.bank.gui.controller;
 
 import com.bank.account.Account;
 import com.bank.account.AccountType;
-import com.bank.account.InterestBearing;
+import com.bank.account.CheckingAccount;
 import com.bank.account.SavingsAccount;
 import com.bank.facade.BankingFacade;
 import com.bank.gui.model.AuthenticationService;
 import com.bank.gui.model.User;
-import com.bank.gui.util.ValidationUtils;
 import com.bank.gui.util.UIUtils;
-import com.bank.observer.AuditService;
+import com.bank.gui.util.ValidationUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -18,365 +17,379 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.text.NumberFormat;
-import java.util.Locale;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * Controlador principal da aplicação bancária.
- * Esta classe implementa o padrão **Model-View-Controller (MVC)**, gerenciando
- * a interação entre a interface principal e os serviços bancários.
+ * Controlador para a janela principal da aplicação bancária.
+ * Esta classe gerencia a interação do usuário com as funcionalidades bancárias
+ * após o login, como criação de contas, depósitos, saques, transferências e
+ * visualização de histórico.
  *
- * <p>Integra a {@code BankingFacade} (que implementa o padrão Facade) com a GUI,
- * demonstrando como os padrões de projeto podem ser combinados para criar
- * uma arquitetura robusta e flexível.
+ * <p>Implementa o padrão **Model-View-Controller (MVC)**, atuando como o Controller
+ * que coordena a View (main.fxml) com o Model (BankingFacade, AuthenticationService).
+ *
+ * <p>Demonstra o **Princípio da Responsabilidade Única (SRP)** ao focar na lógica
+ * de apresentação e interação da janela principal, delegando as operações de negócio
+ * para a {@code BankingFacade}.
  */
 public class MainController {
 
-    // Elementos da interface - Informações do usuário
-    @FXML private Label welcomeLabel;
-    @FXML private Label userInfoLabel;
+    // --- Componentes FXML para a criação de contas ---
+    @FXML
+    private TextField customerNameField;
+    @FXML
+    private ComboBox<AccountType> accountTypeCombo;
+    @FXML
+    private TextField initialBalanceField;
+    @FXML
+    private TextField overdraftLimitField;
+    @FXML
+    private TextField interestRateField;
+    @FXML
+    private Label createAccountStatusLabel;
 
-    // Elementos da interface - Gestão de contas
-    @FXML private TableView<AccountInfo> accountsTable;
-    @FXML private TableColumn<AccountInfo, String> accountNumberColumn;
-    @FXML private TableColumn<AccountInfo, String> accountTypeColumn;
-    @FXML private TableColumn<AccountInfo, String> balanceColumn;
+    // --- Componentes FXML para operações de depósito/saque ---
+    @FXML
+    private ComboBox<String> operationAccountCombo;
+    @FXML
+    private TextField amountField;
+    @FXML
+    private Label operationStatusLabel;
 
-    // Elementos da interface - Operações bancárias
-    @FXML private ComboBox<String> operationAccountCombo;
-    @FXML private TextField amountField;
-    @FXML private TextArea transactionHistoryArea;
-    
-    // Elementos da interface - Transferências
-    @FXML private ComboBox<String> fromAccountCombo;
-    @FXML private ComboBox<String> toAccountCombo;
-    @FXML private TextField transferAmountField;
+    // --- Componentes FXML para transferências ---
+    @FXML
+    private ComboBox<String> fromAccountCombo;
+    @FXML
+    private ComboBox<String> toAccountCombo;
+    @FXML
+    private TextField transferAmountField;
+    @FXML
+    private Label transferStatusLabel;
 
-    // Elementos da interface - Criação de contas
-    @FXML private TextField newAccountNameField;
-    @FXML private ComboBox<AccountType> accountTypeCombo;
-    @FXML private TextField initialBalanceField;
-    @FXML private TextField parameterField;
-    @FXML private Label parameterLabel;
+    // --- Componentes FXML para a lista de contas ---
+    @FXML
+    private TableView<AccountDisplay> accountsTable;
+    @FXML
+    private TableColumn<AccountDisplay, String> colAccountNumber;
+    @FXML
+    private TableColumn<AccountDisplay, String> colCustomerName;
+    @FXML
+    private TableColumn<AccountDisplay, String> colAccountType;
+    @FXML
+    private TableColumn<AccountDisplay, String> colBalance;
 
-    // Serviços
-    private BankingFacade bankingFacade;
-    private AuthenticationService authService;
-    private AuditService auditService;
-    private ObservableList<AccountInfo> accountsList;
+    // --- Componentes FXML para o histórico de transações ---
+    @FXML
+    private TableView<TransactionDisplay> transactionHistoryTable;
+    @FXML
+    private TableColumn<TransactionDisplay, String> colTimestamp;
+    @FXML
+    private TableColumn<TransactionDisplay, String> colAccount;
+    @FXML
+    private TableColumn<TransactionDisplay, String> colType;
+    @FXML
+    private TableColumn<TransactionDisplay, String> colAmount;
+    @FXML
+    private TableColumn<TransactionDisplay, String> colNewBalance;
 
-    // Formatador de moeda
-    private NumberFormat currencyFormatter;
+    // --- Outros componentes FXML ---
+    @FXML
+    private Label welcomeLabel;
+    @FXML
+    private AnchorPane rootPane;
+
+    // --- Serviços e Facades ---
+    private BankingFacade bankingFacade = new BankingFacade();
+    private AuthenticationService authenticationService;
 
     /**
-     * Classe interna para representar informações de conta na tabela.
-     * Demonstra o uso de classes auxiliares para separar responsabilidades.
+     * Classe interna para exibir contas na TableView.
+     * Utiliza o padrão **Adapter** implicitamente, adaptando o objeto {@code Account}
+     * para ser exibido na tabela JavaFX.
      */
-    public static class AccountInfo {
+    public static class AccountDisplay {
         private String accountNumber;
+        private String customerName;
         private String accountType;
         private String balance;
 
-        public AccountInfo(String accountNumber, String accountType, String balance) {
+        public AccountDisplay(String accountNumber, String customerName, String accountType, double balance) {
             this.accountNumber = accountNumber;
+            this.customerName = customerName;
             this.accountType = accountType;
-            this.balance = balance;
+            this.balance = UIUtils.formatCurrency(balance);
         }
 
-        // Getters necessários para o TableView
+        // Getters para PropertyValueFactory
         public String getAccountNumber() { return accountNumber; }
+        public String getCustomerName() { return customerName; }
         public String getAccountType() { return accountType; }
         public String getBalance() { return balance; }
     }
 
     /**
-     * Inicialização do controlador.
-     * Configura os serviços, componentes da interface e carrega dados iniciais.
+     * Classe interna para exibir histórico de transações na TableView.
+     * Adapta os dados de transação para exibição na tabela.
+     */
+    public static class TransactionDisplay {
+        private String timestamp;
+        private String accountNumber;
+        private String type;
+        private String amount;
+        private String newBalance;
+
+        public TransactionDisplay(String timestamp, String accountNumber, String type, double amount, double newBalance) {
+            this.timestamp = timestamp;
+            this.accountNumber = UIUtils.formatAccountNumber(accountNumber);
+            this.type = type;
+            this.amount = UIUtils.formatCurrency(amount);
+            this.newBalance = UIUtils.formatCurrency(newBalance);
+        }
+
+        // Getters para PropertyValueFactory
+        public String getTimestamp() { return timestamp; }
+        public String getAccountNumber() { return accountNumber; }
+        public String getType() { return type; }
+        public String getAmount() { return amount; }
+        public String getNewBalance() { return newBalance; }
+    }
+
+    /**
+     * Define o serviço de autenticação para o controlador.
+     * Utilizado para passar o usuário logado da tela de login.
+     * @param authenticationService O serviço de autenticação.
+     */
+    public void setAuthenticationService(AuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
+    }
+
+    /**
+     * Método de inicialização chamado automaticamente pelo JavaFX após o carregamento do FXML.
+     * Configura os componentes da interface, como ComboBoxes e TableViews.
      */
     @FXML
     private void initialize() {
-        // Inicializa serviços
-        bankingFacade = new BankingFacade();
-        authService = AuthenticationService.getInstance();
-        auditService = new AuditService();
-        
-        // Configura formatador de moeda
-        currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
-        
-        // Configura a interface
-        setupUserInterface();
-        setupAccountsTable();
-        setupAccountCreation();
-        
-        // Carrega dados iniciais
-        loadUserInfo();
-        createDemoAccounts();
+        // Configura ComboBox de tipos de conta
+        accountTypeCombo.setItems(FXCollections.observableArrayList(AccountType.values()));
+        accountTypeCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldType, newType) -> {
+            overdraftLimitField.setDisable(true);
+            interestRateField.setDisable(true);
+            if (newType == AccountType.CHECKING) {
+                overdraftLimitField.setDisable(false);
+                interestRateField.setText(""); // Limpa campo de juros para conta corrente
+            } else if (newType == AccountType.SAVINGS) {
+                interestRateField.setDisable(false);
+                overdraftLimitField.setText(""); // Limpa campo de cheque especial para conta poupança
+            }
+        });
+        accountTypeCombo.getSelectionModel().selectFirst(); // Seleciona o primeiro tipo por padrão
+
+        // Configura as colunas da tabela de contas
+        colAccountNumber.setCellValueFactory(new PropertyValueFactory<>("accountNumber"));
+        colCustomerName.setCellValueFactory(new PropertyValueFactory<>("customerName"));
+        colAccountType.setCellValueFactory(new PropertyValueFactory<>("accountType"));
+        colBalance.setCellValueFactory(new PropertyValueFactory<>("balance"));
+
+        // Configura as colunas da tabela de histórico de transações
+        colTimestamp.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
+        colAccount.setCellValueFactory(new PropertyValueFactory<>("accountNumber"));
+        colType.setCellValueFactory(new PropertyValueFactory<>("type"));
+        colAmount.setCellValueFactory(new PropertyValueFactory<>("amount"));
+        colNewBalance.setCellValueFactory(new PropertyValueFactory<>("newBalance"));
+
+        // Adiciona listeners para limpar mensagens de status ao digitar
+        customerNameField.textProperty().addListener((obs, oldVal, newVal) -> createAccountStatusLabel.setText(""));
+        initialBalanceField.textProperty().addListener((obs, oldVal, newVal) -> createAccountStatusLabel.setText(""));
+        overdraftLimitField.textProperty().addListener((obs, oldVal, newVal) -> createAccountStatusLabel.setText(""));
+        interestRateField.textProperty().addListener((obs, oldVal, newVal) -> createAccountStatusLabel.setText(""));
+
+        amountField.textProperty().addListener((obs, oldVal, newVal) -> operationStatusLabel.setText(""));
+        transferAmountField.textProperty().addListener((obs, oldVal, newVal) -> transferStatusLabel.setText(""));
+    }
+
+    /**
+     * Inicializa os dados específicos do usuário logado após o login.
+     * Deve ser chamado após {@code setAuthenticationService}.
+     */
+    public void initializeData() {
+        if (authenticationService != null && authenticationService.isUserLoggedIn()) {
+            User currentUser = authenticationService.getCurrentUser();
+            welcomeLabel.setText("Bem-vindo(a), " + currentUser.getFullName() + "!");
+        }
         refreshAccountsList();
         refreshTransactionHistory();
     }
 
     /**
-     * Configura os elementos básicos da interface do usuário.
-     */
-    private void setupUserInterface() {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser != null) {
-            welcomeLabel.setText("Bem-vindo, " + currentUser.getFullName() + "!");
-            userInfoLabel.setText("Usuário: " + currentUser.getUsername() + " | Email: " + currentUser.getEmail());
-        }
-    }
-
-    /**
-     * Configura a tabela de contas.
-     */
-    private void setupAccountsTable() {
-        accountsList = FXCollections.observableArrayList();
-        accountsTable.setItems(accountsList);
-        
-        // Configura as colunas da tabela
-        accountNumberColumn.setCellValueFactory(new PropertyValueFactory<>("accountNumber"));
-        accountTypeColumn.setCellValueFactory(new PropertyValueFactory<>("accountType"));
-        balanceColumn.setCellValueFactory(new PropertyValueFactory<>("balance"));
-        
-        // Configura seleção da tabela para atualizar combo de operações
-        accountsTable.getSelectionModel().selectedItemProperty().addListener(
-            (observable, oldValue, newValue) -> {
-                if (newValue != null) {
-                    operationAccountCombo.setValue(newValue.getAccountNumber());
-                }
-            }
-        );
-    }
-
-    /**
-     * Configura os elementos de criação de conta.
-     */
-    private void setupAccountCreation() {
-        // Popula combo de tipos de conta
-        accountTypeCombo.setItems(FXCollections.observableArrayList(AccountType.values()));
-        accountTypeCombo.setValue(AccountType.CHECKING);
-        
-        // Configura listener para atualizar label do parâmetro
-        accountTypeCombo.valueProperty().addListener((observable, oldValue, newValue) -> {
-            updateParameterLabel(newValue);
-        });
-        
-        updateParameterLabel(AccountType.CHECKING);
-    }
-
-    /**
-     * Atualiza o label do parâmetro baseado no tipo de conta selecionado.
-     */
-    private void updateParameterLabel(AccountType accountType) {
-        if (accountType == AccountType.CHECKING) {
-            parameterLabel.setText("Limite de Cheque Especial:");
-            parameterField.setPromptText("Ex: 500.00");
-        } else if (accountType == AccountType.SAVINGS) {
-            parameterLabel.setText("Taxa de Juros (%):");
-            parameterField.setPromptText("Ex: 0.05 (5%)");
-        }
-    }
-
-    /**
-     * Carrega informações do usuário logado.
-     */
-    private void loadUserInfo() {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser == null) {
-            // Se não há usuário logado, volta para a tela de login
-            handleLogout();
-        }
-    }
-
-    /**
-     * Cria contas de demonstração para o usuário atual.
-     */
-    private void createDemoAccounts() {
-        User currentUser = authService.getCurrentUser();
-        if (currentUser != null) {
-            // Cria uma conta corrente de demonstração
-            String checkingAccount = bankingFacade.createAccount(
-                AccountType.CHECKING, 
-                currentUser.getFullName(), 
-                1000.0, 
-                500.0
-            );
-            
-            // Cria uma conta poupança de demonstração
-            String savingsAccount = bankingFacade.createAccount(
-                AccountType.SAVINGS, 
-                currentUser.getFullName(), 
-                2000.0, 
-                0.05
-            );
-            
-            // Adiciona observador de auditoria às contas
-            Account checking = bankingFacade.getAccount(checkingAccount);
-            Account savings = bankingFacade.getAccount(savingsAccount);
-            
-            if (checking != null) checking.addObserver(auditService);
-            if (savings != null) savings.addObserver(auditService);
-        }
-    }
-
-    /**
-     * Atualiza a lista de contas na tabela.
+     * Atualiza a lista de contas exibida na tabela e nos ComboBoxes.
      */
     private void refreshAccountsList() {
-        accountsList.clear();
-        operationAccountCombo.getItems().clear();
-        
-        // Limpa os combos de transferência se existirem
-        if (fromAccountCombo != null) fromAccountCombo.getItems().clear();
-        if (toAccountCombo != null) toAccountCombo.getItems().clear();
-        
-        // Em um sistema real, isso viria de um serviço que filtra contas por usuário
-        // Para demonstração, vamos mostrar todas as contas
-        for (String accountNumber : getAllAccountNumbers()) {
-            Account account = bankingFacade.getAccount(accountNumber);
-            if (account != null) {
-                String formattedBalance = currencyFormatter.format(account.getBalance());
-                accountsList.add(new AccountInfo(
-                    accountNumber,
-                    account.getAccountType(),
-                    formattedBalance
-                ));
-                operationAccountCombo.getItems().add(accountNumber);
-                
-                // Adiciona aos combos de transferência se existirem
-                if (fromAccountCombo != null) fromAccountCombo.getItems().add(accountNumber);
-                if (toAccountCombo != null) toAccountCombo.getItems().add(accountNumber);
-            }
+        ObservableList<AccountDisplay> accountDisplays = FXCollections.observableArrayList();
+        ObservableList<String> accountNumbers = FXCollections.observableArrayList();
+
+        for (Map.Entry<String, Account> entry : bankingFacade.getAllAccounts().entrySet()) {
+            Account acc = entry.getValue();
+            accountDisplays.add(new AccountDisplay(
+                    acc.getAccountNumber(),
+                    acc.getCustomerName(),
+                    acc.getAccountType(),
+                    acc.getBalance()
+            ));
+            accountNumbers.add(acc.getAccountNumber());
         }
+        accountsTable.setItems(accountDisplays);
+        operationAccountCombo.setItems(accountNumbers);
+        fromAccountCombo.setItems(accountNumbers);
+        toAccountCombo.setItems(accountNumbers);
     }
 
     /**
-     * Método auxiliar para obter todos os números de conta.
-     * Agora utiliza o método público da BankingFacade.
+     * Atualiza o histórico de transações exibido na tabela.
      */
-    private java.util.List<String> getAllAccountNumbers() {
-        return bankingFacade.getAllAccountNumbers();
+    private void refreshTransactionHistory() {
+        ObservableList<TransactionDisplay> transactionDisplays = FXCollections.observableArrayList();
+        List<String> logs = bankingFacade.getTransactionHistory();
+
+        // Formato esperado: [TIMESTAMP] [ACCOUNT_NUMBER] [TYPE] [AMOUNT] [NEW_BALANCE]
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        for (String log : logs) {
+            try {
+                String[] parts = log.split(" ", 5); // Divide em 5 partes: [TIMESTAMP] [ACCOUNT_NUMBER] [TYPE] [AMOUNT] [NEW_BALANCE]
+                if (parts.length >= 5) {
+                    String timestampStr = parts[0].substring(1, parts[0].length() - 1); // Remove colchetes
+                    String accountNumber = parts[1];
+                    String type = parts[2];
+                    double amount = Double.parseDouble(parts[3]);
+                    double newBalance = Double.parseDouble(parts[4]);
+
+                    transactionDisplays.add(new TransactionDisplay(
+                            timestampStr,
+                            accountNumber,
+                            type,
+                            amount,
+                            newBalance
+                    ));
+                }
+            } catch (Exception e) {
+                System.err.println("Erro ao parsear log: " + log + " - " + e.getMessage());
+            }
+        }
+        transactionHistoryTable.setItems(transactionDisplays);
     }
 
     /**
      * Manipula a criação de uma nova conta.
+     * Realiza validações de entrada e utiliza a BankingFacade para criar a conta.
+     * @param event O evento de ação.
      */
     @FXML
     private void handleCreateAccount(ActionEvent event) {
-        // Limpa estilos anteriores
-        UIUtils.clearValidationStyles(newAccountNameField, initialBalanceField, parameterField);
+        // Limpa estilos de validação anteriores
+        UIUtils.clearValidationStyles(customerNameField, initialBalanceField, overdraftLimitField, interestRateField);
+        createAccountStatusLabel.setText("");
 
-        // Validação dos campos
+        String customerName = customerNameField.getText().trim();
+        AccountType accountType = accountTypeCombo.getValue();
+        String initialBalanceText = initialBalanceField.getText().trim();
+        String overdraftLimitText = overdraftLimitField.getText().trim();
+        String interestRateText = interestRateField.getText().trim();
+
         boolean isValid = true;
         StringBuilder errorMessage = new StringBuilder();
 
-        String customerName = newAccountNameField.getText().trim();
-        AccountType accountType = accountTypeCombo.getValue();
-
-        // Valida nome do cliente
-        if (!ValidationUtils.isValidName(customerName)) {
-            UIUtils.applyErrorStyle(newAccountNameField);
-            errorMessage.append("Nome deve ter 2-50 caracteres (apenas letras e espaços). ");
+        // Validação do nome do cliente
+        if (!ValidationUtils.isNotEmpty(customerName)) {
+            UIUtils.applyErrorStyle(customerNameField);
+            errorMessage.append("Nome do cliente é obrigatório. ");
             isValid = false;
         }
 
-        // Valida tipo de conta
-        if (accountType == null) {
-            errorMessage.append("Selecione um tipo de conta. ");
-            isValid = false;
-        }
-
-        // Valida saldo inicial
-        if (!ValidationUtils.isValidNonNegativeNumber(initialBalanceField.getText())) {
+        // Validação do saldo inicial
+        if (!ValidationUtils.isValidPositiveNumber(initialBalanceText)) {
             UIUtils.applyErrorStyle(initialBalanceField);
-            errorMessage.append("Saldo inicial deve ser um número não-negativo. ");
+            errorMessage.append("Saldo inicial deve ser um número positivo. ");
             isValid = false;
         }
 
-        // Valida parâmetro específico do tipo de conta
-        if (!ValidationUtils.isValidNumber(parameterField.getText())) {
-            UIUtils.applyErrorStyle(parameterField);
-            errorMessage.append("Parâmetro deve ser um número válido. ");
-            isValid = false;
-        } else {
-            double parameter = Double.parseDouble(parameterField.getText());
-            if (accountType == AccountType.CHECKING && !ValidationUtils.isValidOverdraftLimit(parameter)) {
-                UIUtils.applyErrorStyle(parameterField);
-                errorMessage.append("Limite de cheque especial deve ser não-negativo. ");
+        // Validações específicas por tipo de conta
+        if (accountType == AccountType.CHECKING) {
+            if (!ValidationUtils.isValidNonNegativeNumber(overdraftLimitText)) {
+                UIUtils.applyErrorStyle(overdraftLimitField);
+                errorMessage.append("Limite de cheque especial deve ser um número não negativo. ");
                 isValid = false;
-            } else if (accountType == AccountType.SAVINGS && !ValidationUtils.isValidInterestRate(parameter)) {
-                UIUtils.applyErrorStyle(parameterField);
-                errorMessage.append("Taxa de juros deve estar entre 0 e 1 (0% a 100%). ");
+            }
+        } else if (accountType == AccountType.SAVINGS) {
+            if (!ValidationUtils.isValidPositiveNumber(interestRateText)) {
+                UIUtils.applyErrorStyle(interestRateField);
+                errorMessage.append("Taxa de juros deve ser um número positivo. ");
                 isValid = false;
             }
         }
 
         if (!isValid) {
-            UIUtils.showErrorAlert("Erro de Validação", errorMessage.toString().trim());
+            UIUtils.showErrorAlert("Erro de Criação de Conta", errorMessage.toString().trim());
             return;
         }
 
         try {
-            double initialBalance = Double.parseDouble(initialBalanceField.getText());
-            double parameter = Double.parseDouble(parameterField.getText());
+            double initialBalance = Double.parseDouble(initialBalanceText);
+            String newAccountNumber;
 
-            // Aplica estilos de sucesso
-            UIUtils.applySuccessStyle(newAccountNameField);
-            UIUtils.applySuccessStyle(initialBalanceField);
-            UIUtils.applySuccessStyle(parameterField);
-
-            String accountNumber = bankingFacade.createAccount(accountType, customerName, initialBalance, parameter);
-            Account newAccount = bankingFacade.getAccount(accountNumber);
-            if (newAccount != null) {
-                newAccount.addObserver(auditService);
+            if (accountType == AccountType.CHECKING) {
+                double overdraftLimit = Double.parseDouble(overdraftLimitText);
+                newAccountNumber = bankingFacade.createAccount(accountType, customerName, initialBalance, overdraftLimit);
+            } else {
+                double interestRate = Double.parseDouble(interestRateText);
+                newAccountNumber = bankingFacade.createAccount(accountType, customerName, initialBalance, interestRate);
             }
 
-            UIUtils.showSuccessAlert("Sucesso", 
-                "Conta criada com sucesso!\n" +
-                "Número da conta: " + UIUtils.formatAccountNumber(accountNumber) + "\n" +
-                "Saldo inicial: " + UIUtils.formatCurrency(initialBalance));
-            
-            // Limpa os campos e estilos
-            newAccountNameField.clear();
-            initialBalanceField.clear();
-            parameterField.clear();
-            UIUtils.clearValidationStyles(newAccountNameField, initialBalanceField, parameterField);
-            
-            // Atualiza a lista de contas
-            refreshAccountsList();
-            refreshTransactionHistory();
+            if (newAccountNumber != null) {
+                UIUtils.showSuccessAlert("Sucesso", "Conta " + UIUtils.formatAccountNumber(newAccountNumber) + " criada com sucesso!");
+                clearCreateAccountFields();
+                refreshAccountsList();
+                refreshTransactionHistory();
+            } else {
+                UIUtils.showErrorAlert("Erro", "Falha ao criar conta.");
+            }
 
         } catch (NumberFormatException e) {
-            UIUtils.showErrorAlert("Erro", "Erro interno ao processar valores numéricos.");
+            UIUtils.showErrorAlert("Erro", "Valores numéricos inválidos. Verifique o saldo, limite ou taxa.");
+        } catch (Exception e) {
+            UIUtils.showErrorAlert("Erro", "Ocorreu um erro inesperado: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     /**
-     * Manipula operação de depósito.
+     * Limpa os campos do formulário de criação de conta.
      */
-    @FXML
-    private void handleDeposit(ActionEvent event) {
-        performTransaction("deposit");
+    private void clearCreateAccountFields() {
+        customerNameField.clear();
+        initialBalanceField.clear();
+        overdraftLimitField.clear();
+        interestRateField.clear();
+        accountTypeCombo.getSelectionModel().selectFirst();
+        UIUtils.clearValidationStyles(customerNameField, initialBalanceField, overdraftLimitField, interestRateField);
+        createAccountStatusLabel.setText("");
     }
 
     /**
-     * Manipula operação de saque.
-     */
-    @FXML
-    private void handleWithdraw(ActionEvent event) {
-        performTransaction("withdraw");
-    }
-
-    /**
-     * Realiza uma transação (depósito ou saque).
+     * Manipula operação de depósito ou saque.
+     * @param operation O tipo de operação ("deposit" ou "withdraw").
      */
     private void performTransaction(String operation) {
         // Limpa estilos anteriores
         UIUtils.clearValidationStyles(amountField);
+        operationStatusLabel.setText("");
 
         String accountNumber = operationAccountCombo.getValue();
         String amountText = amountField.getText().trim();
@@ -401,8 +414,8 @@ public class MainController {
                 Account account = bankingFacade.getAccount(accountNumber);
                 if (account != null) {
                     double availableBalance = account.getBalance();
-                    if (account instanceof com.bank.account.CheckingAccount) {
-                        com.bank.account.CheckingAccount checking = (com.bank.account.CheckingAccount) account;
+                    if (account instanceof CheckingAccount) {
+                        CheckingAccount checking = (CheckingAccount) account;
                         availableBalance += checking.getOverdraftLimit();
                     }
                     
@@ -443,7 +456,26 @@ public class MainController {
         } catch (NumberFormatException e) {
             UIUtils.applyErrorStyle(amountField);
             UIUtils.showErrorAlert("Erro", "Erro ao processar o valor inserido.");
+        } catch (Exception e) {
+            UIUtils.showErrorAlert("Erro", "Ocorreu um erro inesperado: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+    /**
+     * Manipula operação de depósito.
+     */
+    @FXML
+    private void handleDeposit(ActionEvent event) {
+        performTransaction("deposit");
+    }
+
+    /**
+     * Manipula operação de saque.
+     */
+    @FXML
+    private void handleWithdraw(ActionEvent event) {
+        performTransaction("withdraw");
     }
 
     /**
@@ -452,19 +484,25 @@ public class MainController {
     @FXML
     private void handleCalculateInterest(ActionEvent event) {
         String accountNumber = operationAccountCombo.getValue();
+        operationStatusLabel.setText("");
+
         if (accountNumber == null || accountNumber.isEmpty()) {
-            showAlert("Erro", "Por favor, selecione uma conta.", Alert.AlertType.ERROR);
+            UIUtils.showErrorAlert("Erro", "Por favor, selecione uma conta para calcular juros.");
             return;
         }
 
         Account account = bankingFacade.getAccount(accountNumber);
-        if (account instanceof InterestBearing) {
-            ((InterestBearing) account).calculateInterest();
-            showAlert("Sucesso", "Juros calculados e aplicados com sucesso!", Alert.AlertType.INFORMATION);
-            refreshAccountsList();
-            refreshTransactionHistory();
+        if (account instanceof SavingsAccount) {
+            if (UIUtils.showConfirmationAlert("Confirmar Cálculo de Juros", 
+                "Confirma o cálculo de juros para a conta " + UIUtils.formatAccountNumber(accountNumber) + "?")) {
+                
+                ((SavingsAccount) account).calculateInterest();
+                UIUtils.showSuccessAlert("Sucesso", "Juros calculados para a conta " + UIUtils.formatAccountNumber(accountNumber) + ".");
+                refreshAccountsList();
+                refreshTransactionHistory();
+            }
         } else {
-            showAlert("Erro", "Esta conta não suporta cálculo de juros.", Alert.AlertType.ERROR);
+            UIUtils.showErrorAlert("Erro", "Esta conta não suporta cálculo de juros.");
         }
     }
 
@@ -475,6 +513,7 @@ public class MainController {
     private void handleTransfer(ActionEvent event) {
         // Limpa estilos anteriores
         UIUtils.clearValidationStyles(transferAmountField);
+        transferStatusLabel.setText("");
 
         String fromAccount = fromAccountCombo.getValue();
         String toAccount = toAccountCombo.getValue();
@@ -509,8 +548,8 @@ public class MainController {
             Account sourceAccount = bankingFacade.getAccount(fromAccount);
             if (sourceAccount != null) {
                 double availableBalance = sourceAccount.getBalance();
-                if (sourceAccount instanceof com.bank.account.CheckingAccount) {
-                    com.bank.account.CheckingAccount checking = (com.bank.account.CheckingAccount) sourceAccount;
+                if (sourceAccount instanceof CheckingAccount) {
+                    CheckingAccount checking = (CheckingAccount) sourceAccount;
                     availableBalance += checking.getOverdraftLimit();
                 }
                 
@@ -548,73 +587,30 @@ public class MainController {
         } catch (NumberFormatException e) {
             UIUtils.applyErrorStyle(transferAmountField);
             UIUtils.showErrorAlert("Erro", "Erro ao processar o valor inserido.");
+        } catch (Exception e) {
+            UIUtils.showErrorAlert("Erro", "Ocorreu um erro inesperado: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     /**
-     * Atualiza o histórico de transações.
-     * Em um sistema real, isso viria de um serviço de histórico.
-     */
-    private void refreshTransactionHistory() {
-        // Para demonstração, vamos mostrar informações básicas das contas
-        StringBuilder history = new StringBuilder();
-        history.append("=== HISTÓRICO DE TRANSAÇÕES ===\n\n");
-        
-        for (String accountNumber : getAllAccountNumbers()) {
-            Account account = bankingFacade.getAccount(accountNumber);
-            if (account != null) {
-                history.append("Conta: ").append(accountNumber).append("\n");
-                history.append("Tipo: ").append(account.getAccountType()).append("\n");
-                history.append("Titular: ").append(account.getCustomerName()).append("\n");
-                history.append("Saldo: ").append(currencyFormatter.format(account.getBalance())).append("\n");
-                history.append("---\n");
-            }
-        }
-        
-        transactionHistoryArea.setText(history.toString());
-    }
-
-    /**
-     * Manipula o logout do usuário.
+     * Manipula o evento de logout, retornando para a tela de login.
+     * @param event O evento de ação.
+     * @throws IOException Se houver um erro ao carregar o arquivo FXML da tela de login.
      */
     @FXML
-    private void handleLogout() {
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Confirmar Logout");
-        confirmation.setHeaderText("Deseja realmente sair do sistema?");
-        confirmation.setContentText("Você será redirecionado para a tela de login.");
-
-        Optional<ButtonType> result = confirmation.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            authService.logout();
-            
-            try {
-                // Carrega a tela de login
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
-                Scene loginScene = new Scene(loader.load(), 800, 600);
-                
-                // Obtém a janela atual e substitui a cena
-                Stage currentStage = (Stage) welcomeLabel.getScene().getWindow();
-                currentStage.setTitle("Sistema Bancário - Login");
-                currentStage.setScene(loginScene);
-                currentStage.setResizable(false);
-                currentStage.centerOnScreen();
-                
-            } catch (IOException e) {
-                showAlert("Erro", "Erro ao carregar a tela de login: " + e.getMessage(), Alert.AlertType.ERROR);
-                e.printStackTrace();
-            }
+    private void handleLogout(ActionEvent event) throws IOException {
+        if (UIUtils.showConfirmationAlert("Confirmar Logout", "Tem certeza que deseja sair?")) {
+            authenticationService.logout();
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
+            Scene scene = new Scene(fxmlLoader.load(), 800, 600);
+            stage.setTitle("Sistema Bancário - Login");
+            stage.setScene(scene);
+            stage.setResizable(false);
+            stage.centerOnScreen();
+            stage.show();
         }
     }
-
-    /**
-     * Exibe um alerta para o usuário.
-     */
-    private void showAlert(String title, String message, Alert.AlertType type) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 }
+
