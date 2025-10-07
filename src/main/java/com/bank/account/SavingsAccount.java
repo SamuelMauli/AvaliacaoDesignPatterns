@@ -14,6 +14,7 @@ public class SavingsAccount extends Account implements Withdrawable, InterestBea
             if (this.balance >= amount) {
                 this.balance -= amount;
                 System.out.println("Withdrawal of " + amount + " from account " + accountNumber + ". New balance: " + balance);
+                notifyObservers("withdraw", amount);
             } else {
                 System.out.println("Insufficient funds.");
             }
@@ -27,6 +28,7 @@ public class SavingsAccount extends Account implements Withdrawable, InterestBea
         double interest = this.balance * interestRate;
         this.balance += interest;
         System.out.println("Interest of " + interest + " added to account " + accountNumber + ". New balance: " + balance);
+        notifyObservers("interest_calculation", interest);
     }
 
     @Override

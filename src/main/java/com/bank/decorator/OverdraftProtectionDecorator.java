@@ -17,6 +17,7 @@ public class OverdraftProtectionDecorator extends AccountDecorator {
             if (decoratedAccount.getBalance() + this.overdraftLimit >= amount) {
                 decoratedAccount.balance -= amount; // Directly modify balance of the decorated account
                 System.out.println("Withdrawal of " + amount + " from account " + decoratedAccount.getAccountNumber() + " with overdraft protection. New balance: " + decoratedAccount.getBalance());
+                decoratedAccount.notifyObservers("withdraw_with_overdraft", amount);
             } else {
                 System.out.println("Insufficient funds and overdraft limit exceeded for account " + decoratedAccount.getAccountNumber());
             }
