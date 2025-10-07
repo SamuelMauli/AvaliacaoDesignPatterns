@@ -3,6 +3,7 @@ package com.bank.decorator;
 import com.bank.account.Account;
 import com.bank.account.Depositable;
 import com.bank.account.Withdrawable;
+import com.bank.observer.AccountObserver;
 
 /**
  * Classe abstrata {@code AccountDecorator} implementa o padrão de projeto **Decorator**.
@@ -112,7 +113,7 @@ public abstract class AccountDecorator extends Account implements Depositable, W
      * @param eventType O tipo de evento.
      */
     @Override
-    protected void adjustBalanceAndNotify(double amount, String eventType) {
+    public void adjustBalanceAndNotify(double amount, String eventType) {
         decoratedAccount.adjustBalanceAndNotify(amount, eventType);
     }
 }
