@@ -105,4 +105,103 @@ public class BankingFacade {
             return -1.0; // Indica erro ou conta não encontrada
         }
     }
+
+    /**
+     * Retorna uma lista com todos os números de conta registrados na Facade.
+     * Este método foi adicionado para facilitar a integração com a GUI.
+     * @return Uma lista contendo todos os números de conta.
+     */
+    public java.util.List<String> getAllAccountNumbers() {
+        return new java.util.ArrayList<>(accounts.keySet());
+    }
+
+    /**
+     * Retorna uma cópia do mapa de contas para operações de leitura.
+     * Este método foi adicionado para facilitar a integração com a GUI,
+     * mantendo o encapsulamento ao retornar uma cópia.
+     * @return Uma cópia do mapa de contas.
+     */
+    public Map<String, Account> getAllAccounts() {
+        return new HashMap<>(accounts);
+    }
+
+    /**
+     * Verifica se uma conta existe no sistema.
+     * @param accountNumber O número da conta a ser verificada.
+     * @return true se a conta existe, false caso contrário.
+     */
+    public boolean accountExists(String accountNumber) {
+        return accounts.containsKey(accountNumber);
+    }
+
+    /**
+     * Retorna o número total de contas registradas no sistema.
+     * @return O número total de contas.
+     */
+    public int getTotalAccountsCount() {
+        return accounts.size();
+    }
+
+    /**
+     * Realiza uma transferência entre duas contas.
+     * Esta operação combina um saque da conta de origem e um depósito na conta de destino.
+     * @param fromAccountNumber Número da conta de origem.
+     * @param toAccountNumber Número da conta de destino.
+     * @param amount Valor a ser transferido.
+     * @return true se a transferência foi bem-sucedida, false caso contrário.
+     */
+    public boolean transfer(String fromAccountNumber, String toAccountNumber, double amount) {
+        Account fromAccount = accounts.get(fromAccountNumber);
+        Account toAccount = accounts.get(toAccountNumber);
+
+        if (fromAccount == null) {
+            System.out.println("Source account not found: " + fromAccountNumber);
+            return false;
+        }
+
+        if (toAccount == null) {
+            System.out.println("Destination account not found: " + toAccountNumber);
+            return false;
+        }
+
+        if (!(fromAccount instanceof Withdrawable)) {
+            System.out.println("Source account does not support withdrawals: " + fromAccountNumber);
+            return false;
+        }
+
+        if (amount <= 0) {
+            System.out.println("Transfer amount must be positive");
+            return false;
+        }
+
+        // Verifica se há saldo suficiente (considerando possível cheque especial)
+        double currentBalance = fromAccount.getBalance();
+        if (fromAccount instanceof com.bank.account.CheckingAccount) {
+            com.bank.account.CheckingAccount checkingAccount = (com.bank.account.CheckingAccount) fromAccount;
+            if (currentBalance - amount < -checkingAccount.getOverdraftLimit()) {
+                System.out.println("Insufficient funds for transfer from account: " + fromAccountNumber);
+                return false;
+            }
+        } else if (currentBalance < amount) {
+            System.out.println("Insufficient funds for transfer from account: " + fromAccountNumber);
+            return false;
+        }
+
+        try {
+            // Realiza o saque da conta de origem
+            Command withdraw = new WithdrawCommand((Withdrawable) fromAccount, fromAccount, amount);
+            withdraw.execute();
+
+            // Realiza o depósito na conta de destino
+            Command deposit = new DepositCommand(toAccount, amount);
+            deposit.execute();
+
+            System.out.println("Transfer completed: " + amount + " from " + fromAccountNumber + " to " + toAccountNumber);
+            return true;
+
+        } catch (Exception e) {
+            System.out.println("Error during transfer: " + e.getMessage());
+            return false;
+        }
+    }
 }

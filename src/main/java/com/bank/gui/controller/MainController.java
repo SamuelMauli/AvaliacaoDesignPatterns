@@ -48,6 +48,11 @@ public class MainController {
     @FXML private ComboBox<String> operationAccountCombo;
     @FXML private TextField amountField;
     @FXML private TextArea transactionHistoryArea;
+    
+    // Elementos da interface - Transferências
+    @FXML private ComboBox<String> fromAccountCombo;
+    @FXML private ComboBox<String> toAccountCombo;
+    @FXML private TextField transferAmountField;
 
     // Elementos da interface - Criação de contas
     @FXML private TextField newAccountNameField;
@@ -223,6 +228,10 @@ public class MainController {
         accountsList.clear();
         operationAccountCombo.getItems().clear();
         
+        // Limpa os combos de transferência se existirem
+        if (fromAccountCombo != null) fromAccountCombo.getItems().clear();
+        if (toAccountCombo != null) toAccountCombo.getItems().clear();
+        
         // Em um sistema real, isso viria de um serviço que filtra contas por usuário
         // Para demonstração, vamos mostrar todas as contas
         for (String accountNumber : getAllAccountNumbers()) {
@@ -235,26 +244,20 @@ public class MainController {
                     formattedBalance
                 ));
                 operationAccountCombo.getItems().add(accountNumber);
+                
+                // Adiciona aos combos de transferência se existirem
+                if (fromAccountCombo != null) fromAccountCombo.getItems().add(accountNumber);
+                if (toAccountCombo != null) toAccountCombo.getItems().add(accountNumber);
             }
         }
     }
 
     /**
      * Método auxiliar para obter todos os números de conta.
-     * Em um sistema real, isso seria implementado na BankingFacade.
+     * Agora utiliza o método público da BankingFacade.
      */
     private java.util.List<String> getAllAccountNumbers() {
-        // Para demonstração, vamos usar reflexão para acessar as contas
-        // Em um sistema real, a BankingFacade teria um método público para isso
-        try {
-            java.lang.reflect.Field accountsField = bankingFacade.getClass().getDeclaredField("accounts");
-            accountsField.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Account> accounts = (java.util.Map<String, Account>) accountsField.get(bankingFacade);
-            return new java.util.ArrayList<>(accounts.keySet());
-        } catch (Exception e) {
-            return new java.util.ArrayList<>();
-        }
+        return bankingFacade.getAllAccountNumbers();
     }
 
     /**
@@ -370,6 +373,51 @@ public class MainController {
             refreshTransactionHistory();
         } else {
             showAlert("Erro", "Esta conta não suporta cálculo de juros.", Alert.AlertType.ERROR);
+        }
+    }
+
+    /**
+     * Manipula operação de transferência entre contas.
+     */
+    @FXML
+    private void handleTransfer(ActionEvent event) {
+        try {
+            String fromAccount = fromAccountCombo.getValue();
+            String toAccount = toAccountCombo.getValue();
+            double amount = Double.parseDouble(transferAmountField.getText());
+
+            if (fromAccount == null || fromAccount.isEmpty()) {
+                showAlert("Erro", "Por favor, selecione a conta de origem.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            if (toAccount == null || toAccount.isEmpty()) {
+                showAlert("Erro", "Por favor, selecione a conta de destino.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            if (fromAccount.equals(toAccount)) {
+                showAlert("Erro", "A conta de origem e destino devem ser diferentes.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            if (amount <= 0) {
+                showAlert("Erro", "O valor da transferência deve ser positivo.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            boolean success = bankingFacade.transfer(fromAccount, toAccount, amount);
+            if (success) {
+                showAlert("Sucesso", "Transferência realizada com sucesso!", Alert.AlertType.INFORMATION);
+                transferAmountField.clear();
+                refreshAccountsList();
+                refreshTransactionHistory();
+            } else {
+                showAlert("Erro", "Falha na transferência. Verifique o saldo e tente novamente.", Alert.AlertType.ERROR);
+            }
+
+        } catch (NumberFormatException e) {
+            showAlert("Erro", "Por favor, insira um valor numérico válido.", Alert.AlertType.ERROR);
         }
     }
 
