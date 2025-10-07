@@ -3,6 +3,7 @@ package com.bank.decorator;
 import com.bank.account.Account;
 import com.bank.account.Depositable;
 import com.bank.account.Withdrawable;
+import com.bank.observer.AccountObserver;
 
 /**
  * Classe abstrata {@code AccountDecorator} implementa o padrão de projeto **Decorator**.
@@ -107,12 +108,12 @@ public abstract class AccountDecorator extends Account implements Depositable, W
     }
 
     /**
-     * Delega o ajuste de saldo e notificação para a conta decorada.
-     * @param amount O valor pelo qual o saldo será ajustado.
-     * @param eventType O tipo de evento.
-     */
-    @Override
-    protected void adjustBalanceAndNotify(double amount, String eventType) {
-        decoratedAccount.adjustBalanceAndNotify(amount, eventType);
-    }
+         * Delega o ajuste de saldo e notificação para a conta decorada.
+         * @param amount O valor pelo qual o saldo será ajustado.
+         * @param eventType O tipo de evento.
+         */
+        @Override
+        public void adjustBalanceAndNotify(double amount, String eventType) {
+            decoratedAccount.adjustBalanceAndNotify(amount, eventType);
+        }
 }
