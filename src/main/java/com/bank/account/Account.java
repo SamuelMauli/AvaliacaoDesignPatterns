@@ -104,7 +104,7 @@ public abstract class Account implements Depositable {
      * @param amount O valor pelo qual o saldo será ajustado (positivo para aumento, negativo para diminuição).
      * @param eventType O tipo de evento a ser notificado.
      */
-    protected void adjustBalanceAndNotify(double amount, String eventType) {
+    public void adjustBalanceAndNotify(double amount, String eventType) {
         this.balance += amount;
         notifyObservers(eventType, amount);
     }
