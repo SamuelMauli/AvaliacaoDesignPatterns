@@ -71,7 +71,7 @@ public class UIUtils {
      * @param message A mensagem do alerta.
      */
     public static void showErrorAlert(String title, String message) {
-        showAlert(title, message, Alert.AlertType.ERROR);
+        showAlert(title, null, message, Alert.AlertType.ERROR);
     }
 
     /**
@@ -80,7 +80,7 @@ public class UIUtils {
      * @param message A mensagem do alerta.
      */
     public static void showSuccessAlert(String title, String message) {
-        showAlert(title, message, Alert.AlertType.INFORMATION);
+        showAlert(title, null, message, Alert.AlertType.INFORMATION);
     }
 
     /**
