@@ -35,6 +35,6 @@ public class AccountFactoryTest {
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             AccountFactory.createAccount(null, "Test Customer", 100.0);
         });
-        assertEquals("Unknown account type: null", exception.getMessage());
+        assertEquals("Account type cannot be null.", exception.getMessage());
     }
 }
