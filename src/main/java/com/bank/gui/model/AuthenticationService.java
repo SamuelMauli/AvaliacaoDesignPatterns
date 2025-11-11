@@ -13,37 +13,73 @@ import java.util.Map;
  *
  * <p>Esta classe também demonstra o **Princípio da Responsabilidade Única (SRP)**,
  * sendo responsável exclusivamente pela autenticação e gerenciamento de usuários.
+ * 
+ * <p><b>COMO FUNCIONA A LÓGICA DO SISTEMA:</b>
+ * <ol>
+ *     <li><b>Singleton:</b> Garante que apenas uma instância do serviço de autenticação
+ *         exista em toda a aplicação. Obtida através de getInstance().</li>
+ *     <li><b>Usuários:</b> Mantém um mapa de usuários (username -> User) com usuários
+ *         pré-cadastrados para demonstração. Em um sistema real, viria de um banco de dados.</li>
+ *     <li><b>Autenticação:</b> O método authenticate() verifica se o username existe
+ *         e se a senha está correta. Se sim, define o usuário como logado e armazena
+ *         em currentUser.</li>
+ *     <li><b>Sessão:</b> Mantém o usuário atual logado em currentUser até que logout()
+ *         seja chamado.</li>
+ * </ol>
  */
 public class AuthenticationService {
+    /** Instância única do AuthenticationService (Singleton) */
     private static AuthenticationService instance;
+    
+    /** Mapa de usuários do sistema (username -> User).
+     *  Em um sistema real, viria de um banco de dados. */
     private Map<String, User> users;
+    
+    /** Usuário atualmente logado no sistema. Null se nenhum usuário estiver logado. */
     private User currentUser;
 
     /**
      * Construtor privado para implementar o padrão Singleton.
      * Inicializa alguns usuários de demonstração.
+     * <p><b>LÓGICA:</b> O construtor é privado para implementar o padrão Singleton.
+     * Inicializa o mapa de usuários e cria usuários padrão para demonstração.
      */
     private AuthenticationService() {
+        // Inicializa o mapa vazio de usuários
         users = new HashMap<>();
+        // Cria usuários padrão para demonstração
+        // Em um sistema real, estes dados viriam de um banco de dados
         initializeDefaultUsers();
     }
 
     /**
      * Retorna a única instância do AuthenticationService.
+     * <p><b>LÓGICA:</b> Implementa o padrão Singleton - cria a instância na primeira
+     * chamada e retorna a mesma instância em chamadas subsequentes. Usa sincronização
+     * para garantir segurança em ambientes multi-threaded.
+     * 
      * @return A instância única do AuthenticationService.
      */
     public static synchronized AuthenticationService getInstance() {
+        // Verifica se a instância já foi criada
         if (instance == null) {
+            // Se não foi criada, cria uma nova instância (chama o construtor privado)
             instance = new AuthenticationService();
         }
+        // Retorna a instância (criada agora ou já existente)
         return instance;
     }
 
     /**
      * Inicializa usuários padrão para demonstração.
      * Em um sistema real, estes dados viriam de um banco de dados.
+     * <p><b>LÓGICA:</b> Cria usuários pré-cadastrados com username, senha, nome completo
+     * e email. Estes usuários são usados para demonstração do sistema. Em um sistema real,
+     * estes dados seriam carregados de um banco de dados ou sistema de autenticação externo.
      */
     private void initializeDefaultUsers() {
+        // Cria usuários padrão para demonstração
+        // Formato: username, senha, nome completo, email
         users.put("admin", new User("admin", "admin123", "Administrador do Sistema", "admin@bank.com"));
         users.put("alice", new User("alice", "alice123", "Alice Smith", "alice@email.com"));
         users.put("bob", new User("bob", "bob123", "Bob Johnson", "bob@email.com"));
@@ -52,17 +88,40 @@ public class AuthenticationService {
 
     /**
      * Autentica um usuário com base no nome de usuário e senha.
+     * <p><b>LÓGICA DE FUNCIONAMENTO:</b>
+     * <ol>
+     *     <li>Busca o usuário no mapa usando o username</li>
+     *     <li>Se o usuário existir, valida a senha usando user.validatePassword()</li>
+     *     <li>Se a senha estiver correta:
+     *         <ul>
+     *             <li>Define o usuário como logado (setLoggedIn(true))</li>
+     *             <li>Armazena o usuário em currentUser</li>
+     *             <li>Retorna true (autenticação bem-sucedida)</li>
+     *         </ul>
+     *     </li>
+     *     <li>Se o usuário não existir ou a senha estiver incorreta, retorna false</li>
+     * </ol>
+     * 
      * @param username Nome de usuário.
      * @param password Senha do usuário.
      * @return true se a autenticação for bem-sucedida, false caso contrário.
      */
     public boolean authenticate(String username, String password) {
+        // Busca o usuário no mapa usando o username
         User user = users.get(username);
+        
+        // Verifica se o usuário existe e se a senha está correta
         if (user != null && user.validatePassword(password)) {
+            // Se a autenticação for bem-sucedida:
+            // 1. Define o usuário como logado
             user.setLoggedIn(true);
+            // 2. Armazena o usuário em currentUser para acesso posterior
             currentUser = user;
+            // 3. Retorna true (autenticação bem-sucedida)
             return true;
         }
+        
+        // Se o usuário não existir ou a senha estiver incorreta, retorna false
         return false;
     }
 

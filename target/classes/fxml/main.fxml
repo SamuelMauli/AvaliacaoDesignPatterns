@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane fx:id="rootPane" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.bank.gui.controller.MainController">
+   <children>
+      <BorderPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <top>
+            <!-- Barra Superior -->
+            <VBox style="-fx-background-color: #1976d2; -fx-padding: 15;">
+               <children>
+                  <HBox alignment="CENTER_LEFT" spacing="20.0">
+                     <children>
+                        <VBox>
+                           <children>
+                              <Label fx:id="welcomeLabel" text="Bem-vindo ao Sistema Bancário!" textFill="WHITE">
+                                 <font>
+                                    <Font name="System Bold" size="18.0" />
+                                 </font>
+                              </Label>
+                              <Label fx:id="userInfoLabel" text="Informações do usuário" textFill="#E3F2FD">
+                                 <font>
+                                    <Font size="12.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </VBox>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button onAction="#handleLogout" text="Sair" style="-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-padding: 8 16; -fx-background-radius: 4;">
+                           <font>
+                              <Font name="System Bold" size="12.0" />
+                           </font>
+                        </Button>
+                     </children>
+                  </HBox>
+               </children>
+            </VBox>
+         </top>
+         
+         <center>
+            <TabPane tabClosingPolicy="UNAVAILABLE">
+               <tabs>
+                  <!-- Aba: Visão Geral das Contas -->
+                  <Tab text="Minhas Contas">
+                     <content>
+                        <VBox spacing="20.0">
+                           <padding>
+                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                           </padding>
+                           <children>
+                              <Label text="Suas Contas Bancárias">
+                                 <font>
+                                    <Font name="System Bold" size="16.0" />
+                                 </font>
+                              </Label>
+                              
+                              <TableView fx:id="accountsTable" prefHeight="300.0">
+                                 <columns>
+                                    <TableColumn fx:id="colAccountNumber" prefWidth="200.0" text="Número da Conta" />
+                                    <TableColumn fx:id="colCustomerName" prefWidth="200.0" text="Nome do Cliente" />
+                                    <TableColumn fx:id="colAccountType" prefWidth="150.0" text="Tipo" />
+                                    <TableColumn fx:id="colBalance" prefWidth="150.0" text="Saldo" />
+                                 </columns>
+                              </TableView>
+                              
+                              <HBox spacing="10.0">
+                                 <children>
+                                    <Button onAction="#handleCalculateInterest" text="Calcular Juros" style="-fx-background-color: #388e3c; -fx-text-fill: white; -fx-padding: 8 16; -fx-background-radius: 4;">
+                                       <font>
+                                          <Font size="12.0" />
+                                       </font>
+                                    </Button>
+                                    <Label text="(Disponível apenas para contas poupança)" textFill="#666666">
+                                       <font>
+                                          <Font size="11.0" />
+                                       </font>
+                                    </Label>
+                                 </children>
+                              </HBox>
+                           </children>
+                        </VBox>
+                     </content>
+                  </Tab>
+                  
+                  <!-- Aba: Operações Bancárias -->
+                  <Tab text="Operações">
+                     <content>
+                        <VBox spacing="20.0">
+                           <padding>
+                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                           </padding>
+                           <children>
+                              <Label text="Operações Bancárias">
+                                 <font>
+                                    <Font name="System Bold" size="16.0" />
+                                 </font>
+                              </Label>
+                              
+                              <GridPane hgap="15.0" vgap="15.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="150.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="300.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                    <Label text="Selecionar Conta:" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <ComboBox fx:id="operationAccountCombo" maxWidth="1.7976931348623157E308" promptText="Escolha uma conta" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                    
+                                    <Label text="Valor:" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <TextField fx:id="amountField" promptText="Digite o valor (ex: 100.50)" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                    
+                                    <HBox spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                       <children>
+                                          <Button onAction="#handleDeposit" text="Depositar" style="-fx-background-color: #388e3c; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 4;">
+                                             <font>
+                                                <Font name="System Bold" size="12.0" />
+                                             </font>
+                                          </Button>
+                                          <Button onAction="#handleWithdraw" text="Sacar" style="-fx-background-color: #f57c00; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 4;">
+                                             <font>
+                                                <Font name="System Bold" size="12.0" />
+                                             </font>
+                                          </Button>
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Label fx:id="operationStatusLabel" textFill="#d32f2f" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                       <font>
+                                          <Font size="11.0" />
+                                       </font>
+                                    </Label>
+                                 </children>
+                              </GridPane>
+                           </children>
+                        </VBox>
+                     </content>
+                  </Tab>
+                  
+                  <!-- Aba: Criar Nova Conta -->
+                  <Tab text="Nova Conta">
+                     <content>
+                        <VBox spacing="20.0">
+                           <padding>
+                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                           </padding>
+                           <children>
+                              <Label text="Criar Nova Conta">
+                                 <font>
+                                    <Font name="System Bold" size="16.0" />
+                                 </font>
+                              </Label>
+                              
+                              <GridPane hgap="15.0" vgap="15.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="150.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="300.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                    <Label text="Nome do Titular:" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <TextField fx:id="customerNameField" promptText="Digite o nome completo" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                    
+                                    <Label text="Tipo de Conta:" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <ComboBox fx:id="accountTypeCombo" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                    
+                                    <Label text="Saldo Inicial:" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <TextField fx:id="initialBalanceField" promptText="Digite o saldo inicial (ex: 1000.00)" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                    
+                                    <Label text="Limite Cheque Especial:" GridPane.columnIndex="0" GridPane.rowIndex="3">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <TextField fx:id="overdraftLimitField" promptText="Para conta corrente (ex: 500.00)" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                    
+                                    <Label text="Taxa de Juros:" GridPane.columnIndex="0" GridPane.rowIndex="4">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <TextField fx:id="interestRateField" promptText="Para conta poupança (ex: 0.05)" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                                    
+                                    <Button onAction="#handleCreateAccount" text="Criar Conta" style="-fx-background-color: #1976d2; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 4;" GridPane.columnIndex="1" GridPane.rowIndex="5">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Button>
+                                 </children>
+                              </GridPane>
+                              
+                              <Label fx:id="createAccountStatusLabel" textFill="#d32f2f">
+                                 <font>
+                                    <Font size="11.0" />
+                                 </font>
+                              </Label>
+                              
+                              <VBox spacing="5.0" style="-fx-background-color: #f5f5f5; -fx-padding: 15; -fx-background-radius: 5;">
+                                 <children>
+                                    <Label text="Informações sobre os Parâmetros:">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="• Conta Corrente: Limite de cheque especial (ex: 500.00)">
+                                       <font>
+                                          <Font size="11.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="• Conta Poupança: Taxa de juros em decimal (ex: 0.05 para 5%)">
+                                       <font>
+                                          <Font size="11.0" />
+                                       </font>
+                                    </Label>
+                                 </children>
+                              </VBox>
+                           </children>
+                        </VBox>
+                     </content>
+                  </Tab>
+                  
+                  <!-- Aba: Transferências -->
+                  <Tab text="Transferências">
+                     <content>
+                        <VBox spacing="20.0">
+                           <padding>
+                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                           </padding>
+                           <children>
+                              <Label text="Transferência entre Contas">
+                                 <font>
+                                    <Font name="System Bold" size="16.0" />
+                                 </font>
+                              </Label>
+                              
+                              <GridPane hgap="15.0" vgap="15.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="150.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="300.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                    <Label text="Conta de Origem:" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <ComboBox fx:id="fromAccountCombo" maxWidth="1.7976931348623157E308" promptText="Selecione a conta de origem" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                    
+                                    <Label text="Conta de Destino:" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <ComboBox fx:id="toAccountCombo" maxWidth="1.7976931348623157E308" promptText="Selecione a conta de destino" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                    
+                                    <Label text="Valor:" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <TextField fx:id="transferAmountField" promptText="Digite o valor a transferir (ex: 100.50)" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                    
+                                    <Button onAction="#handleTransfer" text="Transferir" style="-fx-background-color: #1976d2; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 4;" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Button>
+                                 </children>
+                              </GridPane>
+                              
+                              <Label fx:id="transferStatusLabel" textFill="#d32f2f">
+                                 <font>
+                                    <Font size="11.0" />
+                                 </font>
+                              </Label>
+                              
+                              <VBox spacing="5.0" style="-fx-background-color: #e8f5e8; -fx-padding: 15; -fx-background-radius: 5;">
+                                 <children>
+                                    <Label text="Informações sobre Transferências:">
+                                       <font>
+                                          <Font name="System Bold" size="12.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="• A transferência é realizada instantaneamente entre as contas selecionadas">
+                                       <font>
+                                          <Font size="11.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="• O valor será debitado da conta de origem e creditado na conta de destino">
+                                       <font>
+                                          <Font size="11.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="• Contas correntes podem usar o limite de cheque especial para transferências">
+                                       <font>
+                                          <Font size="11.0" />
+                                       </font>
+                                    </Label>
+                                 </children>
+                              </VBox>
+                           </children>
+                        </VBox>
+                     </content>
+                  </Tab>
+                  
+                  <!-- Aba: Histórico -->
+                  <Tab text="Histórico">
+                     <content>
+                        <VBox spacing="20.0">
+                           <padding>
+                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                           </padding>
+                           <children>
+                              <Label text="Histórico de Transações">
+                                 <font>
+                                    <Font name="System Bold" size="16.0" />
+                                 </font>
+                              </Label>
+                              
+                              <TableView fx:id="transactionHistoryTable" prefHeight="400.0">
+                                 <columns>
+                                    <TableColumn fx:id="colTimestamp" prefWidth="200.0" text="Data/Hora" />
+                                    <TableColumn fx:id="colAccount" prefWidth="150.0" text="Conta" />
+                                    <TableColumn fx:id="colType" prefWidth="150.0" text="Tipo" />
+                                    <TableColumn fx:id="colAmount" prefWidth="150.0" text="Valor" />
+                                    <TableColumn fx:id="colNewBalance" prefWidth="150.0" text="Novo Saldo" />
+                                 </columns>
+                              </TableView>
+                              
+                              <Label text="Nota: Este histórico mostra todas as transações realizadas no sistema." textFill="#666666" wrapText="true">
+                                 <font>
+                                    <Font size="11.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </VBox>
+                     </content>
+                  </Tab>
+               </tabs>
+            </TabPane>
+         </center>
+      </BorderPane>
+   </children>
+</AnchorPane>
